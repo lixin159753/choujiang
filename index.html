@@ -35,14 +35,6 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      background: conic-gradient(
-        #f00 0deg 60deg,
-        #0f0 60deg 120deg,
-        #00f 120deg 180deg,
-        #ff0 180deg 240deg,
-        #f0f 240deg 300deg,
-        #0ff 300deg 360deg
-      );
       transition: transform 3s ease-out;
       transform: rotate(0deg);
     }
@@ -57,6 +49,7 @@
       border-left: 10px solid transparent;
       border-right: 10px solid transparent;
       border-bottom: 30px solid #000;
+      z-index: 10;
     }
 
     .btn {
@@ -80,6 +73,21 @@
       font-size: 18px;
       color: #fff;
     }
+    
+    .used-tip {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #fff;
+      text-align: center;
+    }
+    
+    .sector-text {
+      font-size: 12px;
+      font-weight: bold;
+      fill: white;
+      text-shadow: 1px 1px 1px black;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -87,29 +95,154 @@
   <div class="title">🎉 扫码抽奖活动</div>
 
   <div class="wheel-container">
-    <div class="wheel" id="wheel"></div>
+    <div class="wheel" id="wheel">
+      <svg viewBox="0 0 300 300" width="300" height="300">
+        <!-- 扇区将通过JavaScript动态生成 -->
+      </svg>
+    </div>
     <div class="pointer"></div>
   </div>
 
   <button class="btn" id="drawBtn">开始抽奖</button>
 
   <div class="result" id="result"></div>
+  
+  <div class="used-tip" id="usedTip" style="display: none;">您已经参与过本次抽奖活动</div>
 
   <script>
-    // 奖项配置
-    const prizes = [
-      { name: '一等奖', probability: 1 },
-      { name: '二等奖', probability: 5 },
-      { name: '三等奖', probability: 10 },
-      { name: '谢谢参与', probability: 84 }
+    // 奖项配置 (9个扇区)
+    const prizeTypes = [
+      { name: '一等奖', probability: 1, color: '#ff4d4d', emoji: '🏆' },
+      { name: '二等奖', probability: 5, color: '#4dff88', emoji: '🎉' },
+      { name: '三等奖', probability: 10, color: '#4da6ff', emoji: '🎁' },
+      { name: '三等奖', probability: 10, color: '#4da6ff', emoji: '🎁' },
+      { name: '谢谢惠顾', probability: 15, color: '#ffd633', emoji: '💔' },
+      { name: '谢谢惠顾', probability: 15, color: '#ffd633', emoji: '💔' },
+      { name: '谢谢惠顾', probability: 15, color: '#ffd633', emoji: '💔' },
+      { name: '谢谢惠顾', probability: 15, color: '#ffd633', emoji: '💔' },
+      { name: '谢谢惠顾', probability: 15, color: '#ffd633', emoji: '💔' }
     ];
+
+    let prizes = [];
 
     const wheel = document.getElementById('wheel');
     const drawBtn = document.getElementById('drawBtn');
     const resultDiv = document.getElementById('result');
+    const usedTip = document.getElementById('usedTip');
+    const svg = wheel.querySelector('svg');
+
+    // 随机打乱数组顺序
+    function shuffleArray(array) {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    }
+
+    // 初始化奖项顺序（随机分布）
+    function initPrizes() {
+      prizes = shuffleArray(prizeTypes);
+    }
+
+    // 绘制扇区
+    function drawWheel() {
+      const centerX = 150;
+      const centerY = 150;
+      const radius = 150;
+      const sectorAngle = 360 / prizes.length;
+      
+      svg.innerHTML = '';
+      
+      prizes.forEach((prize, index) => {
+        const startAngle = index * sectorAngle;
+        const endAngle = (index + 1) * sectorAngle;
+        
+        // 计算扇区路径
+        const startAngleRad = (startAngle - 90) * Math.PI / 180;
+        const endAngleRad = (endAngle - 90) * Math.PI / 180;
+        
+        const x1 = centerX + radius * Math.cos(startAngleRad);
+        const y1 = centerY + radius * Math.sin(startAngleRad);
+        const x2 = centerX + radius * Math.cos(endAngleRad);
+        const y2 = centerY + radius * Math.sin(endAngleRad);
+        
+        const largeArcFlag = sectorAngle > 180 ? 1 : 0;
+        
+        const pathData = [
+          `M ${centerX} ${centerY}`,
+          `L ${x1} ${y1}`,
+          `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+          'Z'
+        ].join(' ');
+        
+        // 创建扇区路径
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', prize.color);
+        path.setAttribute('stroke', '#fff');
+        path.setAttribute('stroke-width', '2');
+        svg.appendChild(path);
+        
+        // 添加文字和图案
+        const textAngle = startAngle + sectorAngle / 2;
+        const textAngleRad = (textAngle - 90) * Math.PI / 180;
+        const textRadius = radius * 0.6;
+        const textX = centerX + textRadius * Math.cos(textAngleRad);
+        const textY = centerY + textRadius * Math.sin(textAngleRad);
+        
+        // 添加emoji图案
+        const emoji = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        emoji.setAttribute('x', textX);
+        emoji.setAttribute('y', textY - 8);
+        emoji.setAttribute('text-anchor', 'middle');
+        emoji.setAttribute('class', 'sector-text');
+        emoji.textContent = prize.emoji;
+        svg.appendChild(emoji);
+        
+        // 添加奖项文字
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', textX);
+        text.setAttribute('y', textY + 8);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('class', 'sector-text');
+        text.textContent = prize.name;
+        svg.appendChild(text);
+      });
+    }
+
+    // 检查是否已经抽过奖
+    function hasDrawn() {
+      return localStorage.getItem('hasDrawn') === 'true';
+    }
+
+    // 页面加载时检查抽奖状态
+    if (hasDrawn()) {
+      drawBtn.disabled = true;
+      drawBtn.style.display = 'none';
+      usedTip.style.display = 'block';
+      
+      // 显示已获得的奖项
+      const history = JSON.parse(localStorage.getItem('lotteryHistory') || '[]');
+      if (history.length > 0) {
+        resultDiv.textContent = `您已获得：${history[0].prize}`;
+      }
+    }
+
+    // 初始化并绘制转盘
+    initPrizes();
+    drawWheel();
 
     // 抽奖逻辑
     function draw() {
+      // 再次检查是否已经抽过奖（防止并发情况）
+      if (hasDrawn()) {
+        alert('您已经参与过本次抽奖活动');
+        drawBtn.disabled = true;
+        return;
+      }
+
       const rand = Math.random() * 100;
       let sum = 0;
       let selected = prizes[prizes.length - 1];
@@ -122,10 +255,10 @@
         }
       }
 
-      // 计算旋转角度（360度/6项 = 60度/项）
+      // 计算旋转角度（360度/9项 = 40度/项）
       const index = prizes.findIndex(p => p.name === selected.name);
       const baseDegree = 360 * 5; // 多转几圈
-      const prizeDegree = 360 - (index * 60) - 30; // 停在中间
+      const prizeDegree = 360 - (index * (360/prizes.length)) - (360/prizes.length/2); // 停在中间
       const finalDegree = baseDegree + prizeDegree;
 
       wheel.style.transform = `rotate(${finalDegree}deg)`;
@@ -139,9 +272,14 @@
       history.unshift(record);
       localStorage.setItem('lotteryHistory', JSON.stringify(history.slice(0, 10)));
 
+      // 标记用户已抽奖
+      localStorage.setItem('hasDrawn', 'true');
+
       setTimeout(() => {
         alert(`恭喜获得：${selected.name}`);
-        drawBtn.disabled = false;
+        drawBtn.disabled = true;
+        drawBtn.style.display = 'none';
+        usedTip.style.display = 'block';
       }, 3000);
     }
 
